@@ -15,7 +15,7 @@
   </div>
 
   <div class="composer">
-    <textarea id="draftInput" rows="3" placeholder="Your message will appear here. Edit it before sending..."></textarea>
+    <textarea id="draftInput" rows="3" placeholder="Your x message will appear here. Edit it before sending..."></textarea>
     <div class="composerActions">
       <button id="sendBtn" onclick="sendCurrentDraft()">Send</button>
       <button id="clearBtn" type="button" onclick="clearDraft()">Clear</button>
@@ -82,26 +82,38 @@
       statusEl.innerText = "🎧 Listening...";
       startBtn.disabled = true;
       
-      console.log("Start button clicked");
-      console.log("navigator.mediaDevices:", navigator.mediaDevices);
+      console.log("Start clicked, mediaDevices available:", !!navigator.mediaDevices);
       
-      // Try to request microphone permission first (Android)
+      // Detect if on Android
+      const isAndroid = /Android/.test(navigator.userAgent);
+      console.log("Is Android:", isAndroid);
+      
+      // Try requesting microphone permission
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         navigator.mediaDevices.getUserMedia({ audio: true })
           .then((stream) => {
-            console.log("Mic permission granted");
-            // Stop the stream - we only needed permission
+            console.log("Permission granted");
             stream.getTracks().forEach(track => track.stop());
             recognition.start();
           })
           .catch((error) => {
             console.log("getUserMedia error:", error.name, error.message);
-            statusEl.innerText = "❌ " + error.name + ": " + error.message;
+            if (error.name === "NotAllowedError") {
+              statusEl.innerText = "❌ Permission denied. Please allow microphone.";
+            } else {
+              statusEl.innerText = "❌ " + error.message;
+            }
             startBtn.disabled = false;
           });
       } else {
-        console.log("mediaDevices not available, trying direct start");
-        // Fallback: try direct recognition.start() on older browsers
+        // Fallback for browsers without getUserMedia
+        console.log("Fallback: using recognition.start() directly");
+        
+        // On Android, may need to guide user to settings
+        if (isAndroid) {
+          statusEl.innerText = "📱 Android detected. If mic permission is denied, go to Settings > Apps > [Browser] > Permissions > Microphone and enable it.";
+        }
+        
         recognition.start();
       }
     }
@@ -160,25 +172,34 @@
     }
 
     recognition.onend = function() {
+      console.log("Recognition ended");
       startBtn.disabled = false;
     };
 
     recognition.onerror = function(event) {
+      console.log("Recognition error:", event.error);
       let errorMsg = event.error;
       
       if (event.error === "not-allowed") {
-        errorMsg = "Permission denied. Please allow microphone access in your browser settings.";
+        errorMsg = "Microphone permission denied.";
+        // Add retry button for "not-allowed" error
+        statusEl.innerHTML = `❌ ${errorMsg} <button onclick="location.reload()" style="margin-left: 10px;">Refresh & Try Again</button>`;
       } else if (event.error === "network") {
         errorMsg = "Network error. Check your internet connection.";
+        statusEl.innerText = "❌ " + errorMsg;
       } else if (event.error === "no-speech") {
         errorMsg = "No speech detected. Please try again.";
+        statusEl.innerText = "❌ " + errorMsg;
+      } else {
+        errorMsg = event.error;
+        statusEl.innerText = "❌ " + errorMsg;
       }
       
-      statusEl.innerText = "❌ Mic error: " + errorMsg;
       startBtn.disabled = false;
     };
 
     recognition.onresult = function(event) {
+      console.log("Recognition result:", event.results[0][0].transcript);
       const text = event.results[0][0].transcript;
       draftInput.value = text;
       draftInput.focus();
