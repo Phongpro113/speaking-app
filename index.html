@@ -82,15 +82,28 @@
       statusEl.innerText = "🎧 Listening...";
       startBtn.disabled = true;
       
-      // Request microphone permission (triggers permission dialog on Android)
-      navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(() => {
-          recognition.start();
-        })
-        .catch((error) => {
-          statusEl.innerText = "❌ Microphone permission denied";
-          startBtn.disabled = false;
-        });
+      console.log("Start button clicked");
+      console.log("navigator.mediaDevices:", navigator.mediaDevices);
+      
+      // Try to request microphone permission first (Android)
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ audio: true })
+          .then((stream) => {
+            console.log("Mic permission granted");
+            // Stop the stream - we only needed permission
+            stream.getTracks().forEach(track => track.stop());
+            recognition.start();
+          })
+          .catch((error) => {
+            console.log("getUserMedia error:", error.name, error.message);
+            statusEl.innerText = "❌ " + error.name + ": " + error.message;
+            startBtn.disabled = false;
+          });
+      } else {
+        console.log("mediaDevices not available, trying direct start");
+        // Fallback: try direct recognition.start() on older browsers
+        recognition.start();
+      }
     }
 
     function clearDraft() {
