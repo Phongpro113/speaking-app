@@ -142,7 +142,17 @@
     };
 
     recognition.onerror = function(event) {
-      statusEl.innerText = "❌ Mic error: " + event.error;
+      let errorMsg = event.error;
+      
+      if (event.error === "not-allowed") {
+        errorMsg = "Permission denied. Please allow microphone access in your browser settings.";
+      } else if (event.error === "network") {
+        errorMsg = "Network error. Check your internet connection.";
+      } else if (event.error === "no-speech") {
+        errorMsg = "No speech detected. Please try again.";
+      }
+      
+      statusEl.innerText = "❌ Mic error: " + errorMsg;
       startBtn.disabled = false;
     };
 
