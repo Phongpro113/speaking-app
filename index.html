@@ -81,7 +81,16 @@
     function start() {
       statusEl.innerText = "🎧 Listening...";
       startBtn.disabled = true;
-      recognition.start();
+      
+      // Request microphone permission (triggers permission dialog on Android)
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(() => {
+          recognition.start();
+        })
+        .catch((error) => {
+          statusEl.innerText = "❌ Microphone permission denied";
+          startBtn.disabled = false;
+        });
     }
 
     function clearDraft() {
