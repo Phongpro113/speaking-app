@@ -45,10 +45,24 @@
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
 
-    function speak(text) {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "en-US";
-      speechSynthesis.speak(utterance);
+    async function speak(text) {
+      try {
+        const res = await fetch("/tts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text })
+        });
+        if (!res.ok) throw new Error("TTS failed");
+        const blob = await res.blob();
+        const audio = new Audio(URL.createObjectURL(blob));
+        audio.play();
+      } catch (err) {
+        console.error("Fish Audio TTS error:", err);
+        // fallback về browser TTS nếu lỗi
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = "en-US";
+        speechSynthesis.speak(utterance);
+      }
     }
 
     function appendMessage(role, text) {

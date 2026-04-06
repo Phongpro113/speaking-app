@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const { MsEdgeTTS, OUTPUT_FORMAT } = require("msedge-tts");
 // 1. Thay đổi thư viện
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 require("dotenv").config();
@@ -148,6 +149,31 @@ app.post("/chat", async (req, res) => {
         res.status(500).json({
             error: err?.message || "Server error"
         });
+    }
+});
+
+// --- EDGE TTS (Microsoft, miễn phí) ---
+app.post("/tts", async (req, res) => {
+    const { text } = req.body;
+    if (!text || !text.trim()) {
+        return res.status(400).json({ error: "'text' is required" });
+    }
+
+    try {
+        const tts = new MsEdgeTTS();
+        await tts.setMetadata("en-US-JennyNeural", OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
+        const { audioStream } = tts.toStream(text.trim());
+
+        res.setHeader("Content-Type", "audio/mpeg");
+        audioStream.pipe(res);
+
+        audioStream.on("error", (err) => {
+            console.error("[TTS] Edge TTS error:", err);
+            if (!res.headersSent) res.status(500).json({ error: err.message });
+        });
+    } catch (err) {
+        console.error("[TTS] Edge TTS error:", err);
+        res.status(500).json({ error: err.message });
     }
 });
 
