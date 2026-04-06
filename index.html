@@ -170,7 +170,19 @@
         const data = await res.json();
 
         if (!res.ok) {
-          data.reply = "token limit exceeded. Please try again.";
+          let errMsg;
+          if (res.status === 429) {
+            errMsg = "❌ API quota exceeded. Please wait and try again.";
+          } else if (res.status === 401 || res.status === 403) {
+            errMsg = "❌ Invalid or missing API key.";
+          } else if (res.status === 402) {
+            errMsg = "❌ Insufficient API balance. Please top up your account.";
+          } else {
+            errMsg = `❌ Server error (${res.status}): ${data.error || "Please try again."}`;
+          }
+          statusEl.innerText = errMsg;
+          sendBtn.disabled = false;
+          return;
         }
 
         appendMessage("AI", data.reply);
